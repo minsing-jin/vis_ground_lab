@@ -176,6 +176,12 @@ python3 examples/prepare_dummy_data.py
 bash examples/run_cli_demo.sh
 ```
 
+
+## Work Management
+
+- 작업 이력: `docs/WORK_LOG.md`
+- 지속 관리 보드: `docs/WORKBOARD.md`
+
 ## Tests
 
 ```bash
