@@ -1,0 +1,19 @@
+# CPU/저사양 스모크 테스트용 (속도 느림)
+model:
+  name: microsoft/Florence-2-base
+  use_lora: true
+  lora_r: 4
+  lora_alpha: 8
+  lora_dropout: 0.05
+
+trainer:
+  learning_rate: 1.0e-4
+  batch_size: 1
+  epochs: 1
+  checkpoint_dir: checkpoints
+
+data:
+  train_jsonl: data/train.jsonl
+  eval_jsonl: data/eval.jsonl
+  image_root: data/images
+  normalize_mode: 0-1000

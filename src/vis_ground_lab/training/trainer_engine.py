@@ -35,30 +35,44 @@ class TrainerEngine:
         )
 
     def collate_fn(self, samples: list[VGSample]) -> dict[str, Any]:
-        """Batch images/prompts using model processor and keep bbox targets."""
+        """Batch images/prompts using model processor."""
         if self.model_wrapper.processor is None:
             raise RuntimeError("Model processor is unavailable. Call load_model() first.")
 
         images = [sample.image for sample in samples]
         texts = [sample.text for sample in samples]
-        bboxes = torch.tensor(
-            [[sample.bbox.x_min, sample.bbox.y_min, sample.bbox.x_max, sample.bbox.y_max] for sample in samples],
-            dtype=torch.float32,
-        )
 
         model_inputs = self.model_wrapper.processor(
             text=texts,
             images=images,
             return_tensors="pt",
             padding=True,
-            truncation=True,
+            truncation=False,
         )
+
+        # Align floating tensors with model parameter dtype (CPU often needs fp32).
+        if self.model_wrapper.model is not None:
+            model_dtype = next(self.model_wrapper.model.parameters()).dtype
+            for key, value in list(model_inputs.items()):
+                if hasattr(value, "dtype") and torch.is_floating_point(value):
+                    model_inputs[key] = value.to(dtype=model_dtype)
+
+            # Florence-2 text side has a fixed positional embedding budget.
+            max_pos = int(
+                getattr(
+                    getattr(self.model_wrapper.model.config, "text_config", self.model_wrapper.model.config),
+                    "max_position_embeddings",
+                    1024,
+                )
+            )
+            if "input_ids" in model_inputs and model_inputs["input_ids"].shape[1] > max_pos:
+                model_inputs["input_ids"] = model_inputs["input_ids"][:, :max_pos]
+                if "attention_mask" in model_inputs:
+                    model_inputs["attention_mask"] = model_inputs["attention_mask"][:, :max_pos]
 
         # Default CausalLM training target: next-token prediction.
         if "input_ids" in model_inputs:
             model_inputs["labels"] = model_inputs["input_ids"].clone()
-
-        model_inputs["bbox_targets"] = bboxes
         return model_inputs
 
     def train(self, train_dataset: Any, eval_dataset: Any | None = None) -> Trainer:

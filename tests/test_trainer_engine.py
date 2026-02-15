@@ -34,8 +34,7 @@ def test_collate_fn_builds_batch_and_labels(tmp_path):
     batch = engine.collate_fn(samples)
     assert "input_ids" in batch
     assert "labels" in batch
-    assert "bbox_targets" in batch
-    assert batch["bbox_targets"].shape == (2, 4)
+    assert "bbox_targets" not in batch
 
 
 def test_checkpoint_dir_is_created(tmp_path):

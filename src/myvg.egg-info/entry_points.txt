@@ -1,2 +1,0 @@
-[console_scripts]
-myvg = vis_ground_lab.cli:app
