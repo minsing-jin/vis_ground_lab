@@ -1,0 +1,18 @@
+model:
+  name: microsoft/Florence-2-base
+  use_lora: true
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+
+trainer:
+  learning_rate: 5.0e-5
+  batch_size: 2
+  epochs: 3
+  checkpoint_dir: checkpoints
+
+data:
+  train_jsonl: data/train.jsonl
+  eval_jsonl: data/eval.jsonl
+  image_root: data/images
+  normalize_mode: 0-1000
