@@ -15,8 +15,9 @@
 
 ### P1
 - [ ] (`TODO`) `myvg evaluate`에 per-sample 결과 저장 옵션 추가
-- [ ] (`TODO`) HF push/pull e2e 예제 문서화 강화
-- [ ] (`TODO`) config schema 확장(precision/device/offline flags)
+- [x] (`DONE`) HF push/pull e2e 예제 문서화 강화
+- [x] (`DONE`) config schema 확장(1차: backend/adapter/cache/image params)
+- [ ] (`TODO`) config schema 확장(2차: precision/device/offline flags)
 
 ### P2
 - [ ] (`TODO`) README에 다국어(EN/KR) 섹션 분리
@@ -26,3 +27,4 @@
 - [ ] Kosmos-2 Wrapper 추가
 - [ ] Florence-2 외 백본 공통 전처리 추상화
 - [ ] 배포용 model card 템플릿 자동 생성
+- [ ] 튜닝 레시피 표준표(데이터 규모별) 문서화
