@@ -1,5 +1,14 @@
 model:
+  backend: florence2
   name: microsoft/Florence-2-base
+  # 기존 adapter에서 이어서 학습하려면 지정 (로컬 경로 또는 HF repo)
+  adapter_path_or_repo: null
+  cache_dir: .hf_cache
+
+  # Florence-2 학습 안정화용 (text max position 초과 방지)
+  train_image_size: 384
+  train_image_seq_length: 256
+
   use_lora: true
   lora_r: 16
   lora_alpha: 32

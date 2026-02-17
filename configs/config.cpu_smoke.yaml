@@ -1,6 +1,12 @@
-# CPU/저사양 스모크 테스트용 (속도 느림)
+# CPU/저사양 스모크 테스트용
 model:
+  backend: florence2
   name: microsoft/Florence-2-base
+  adapter_path_or_repo: null
+  cache_dir: .hf_cache
+  train_image_size: 384
+  train_image_seq_length: 256
+
   use_lora: true
   lora_r: 4
   lora_alpha: 8

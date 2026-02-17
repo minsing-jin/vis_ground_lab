@@ -17,7 +17,12 @@ class TrainerConfig(BaseModel):
 class ModelConfig(BaseModel):
     """Model configuration for wrapper instantiation."""
 
+    backend: str = Field(default="florence2")
     name: str = Field(default="microsoft/Florence-2-base")
+    adapter_path_or_repo: str | None = None
+    cache_dir: str = ".hf_cache"
+    train_image_size: int = Field(default=384, ge=128)
+    train_image_seq_length: int = Field(default=256, ge=64)
     use_lora: bool = Field(default=True)
     lora_r: int = Field(default=16, ge=1)
     lora_alpha: int = Field(default=32, ge=1)

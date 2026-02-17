@@ -9,6 +9,7 @@ from vis_ground_lab.base import BoundingBox
 from vis_ground_lab.config.loader import load_train_config
 from vis_ground_lab.data_manager import JSONLVisualGroundingDataset
 from vis_ground_lab.evaluation import Evaluator
+from vis_ground_lab.models.factory import create_model_wrapper
 from vis_ground_lab.models.florence2 import Florence2Wrapper
 from vis_ground_lab.training.trainer_engine import TrainerEngine
 
@@ -37,17 +38,11 @@ def _to_pixel_bbox(bbox: BoundingBox, normalize_mode: str, width: int, height: i
 
 @app.command()
 def train(config: str = typer.Option(..., "--config", "-c", help="Path to training YAML config")) -> None:
-    """Run training with Florence-2 + LoRA from a YAML config file."""
+    """Run training from a YAML config file."""
     cfg = load_train_config(config)
 
-    model = Florence2Wrapper(
-        model_name=cfg.model.name,
-        use_lora=cfg.model.use_lora,
-        lora_r=cfg.model.lora_r,
-        lora_alpha=cfg.model.lora_alpha,
-        lora_dropout=cfg.model.lora_dropout,
-    )
-    model.load_model()
+    model = create_model_wrapper(cfg.model)
+    model.load_model(adapter_path_or_repo=cfg.model.adapter_path_or_repo)
 
     train_dataset = JSONLVisualGroundingDataset(
         source=cfg.data.train_jsonl,
