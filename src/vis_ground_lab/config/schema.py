@@ -5,6 +5,12 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
+class TaskConfig(BaseModel):
+    """Top-level task selector."""
+
+    name: str = Field(default="grounding")
+
+
 class TrainerConfig(BaseModel):
     """Core trainer hyperparameters."""
 
@@ -35,12 +41,15 @@ class DataConfig(BaseModel):
     train_jsonl: str
     eval_jsonl: str | None = None
     image_root: str | None = None
+    dataset_yaml: str | None = None
+    val_coco: str | None = None
     normalize_mode: str = Field(default="0-1000")
 
 
 class TrainRunConfig(BaseModel):
     """Top-level training config used by CLI."""
 
+    task: TaskConfig = Field(default_factory=TaskConfig)
     model: ModelConfig = Field(default_factory=ModelConfig)
     trainer: TrainerConfig = Field(default_factory=TrainerConfig)
     data: DataConfig

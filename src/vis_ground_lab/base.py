@@ -29,6 +29,15 @@ class VGSample:
     metadata: Mapping[str, Any] | None = None
 
 
+@dataclass(frozen=True)
+class UIElement:
+    """Standardized detector output element."""
+
+    class_name: str
+    bbox: BoundingBox
+    score: float
+
+
 class BaseVGModel(ABC):
     """Interface for model backends (e.g., Florence-2, Kosmos-2)."""
 

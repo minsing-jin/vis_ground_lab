@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from vis_ground_lab.config.schema import ModelConfig
 from vis_ground_lab.models.florence2 import Florence2Wrapper
+from vis_ground_lab.models.yolo_ultralytics import YoloUltralyticsWrapper
 
 
-def create_model_wrapper(model_cfg: ModelConfig) -> Florence2Wrapper:
+def create_model_wrapper(model_cfg: ModelConfig) -> Florence2Wrapper | YoloUltralyticsWrapper:
     """Create model wrapper by backend name.
 
     Currently supported:
@@ -25,6 +26,8 @@ def create_model_wrapper(model_cfg: ModelConfig) -> Florence2Wrapper:
             train_image_size=model_cfg.train_image_size,
             train_image_seq_length=model_cfg.train_image_seq_length,
         )
+    if backend == "yolo_ultralytics":
+        return YoloUltralyticsWrapper(model_name=model_cfg.name)
 
     raise ValueError(
         f"Unsupported model backend: {model_cfg.backend}. "

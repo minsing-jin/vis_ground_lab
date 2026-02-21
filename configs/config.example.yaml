@@ -1,3 +1,6 @@
+task:
+  name: grounding
+
 model:
   backend: florence2
   name: microsoft/Florence-2-base

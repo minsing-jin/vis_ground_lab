@@ -11,6 +11,7 @@ requires-python = ">=3.10"
 authors = [{ name = "vis_ground_lab" }]
 dependencies = [
   "torch>=2.2.0",
+  "numpy>=1.26.0",
   "transformers>=4.40.0",
   "peft>=0.10.0",
   "datasets>=2.18.0",
@@ -25,10 +26,17 @@ dependencies = [
 
 [project.scripts]
 myvg = "vis_ground_lab.cli:app"
+vis-ground-lab = "vis_ground_lab.cli:app"
 
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0.0",
+]
+detector = [
+  "ultralytics>=8.2.0",
+  "optuna>=3.6.0",
+  "gradio>=4.0.0",
+  "opencv-python>=4.9.0.80",
 ]
 
 [tool.setuptools]

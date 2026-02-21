@@ -1,0 +1,19 @@
+task:
+  name: tool_button_detection
+
+model:
+  backend: yolo_ultralytics
+  name: yolov8n.pt
+  use_lora: false
+
+trainer:
+  learning_rate: 1.0e-3
+  batch_size: 8
+  epochs: 20
+  checkpoint_dir: runs/tool_button
+
+data:
+  train_jsonl: data/tool_dataset/data.yaml
+  dataset_yaml: data/tool_dataset/data.yaml
+  image_root: data/tool_dataset/images
+  normalize_mode: none

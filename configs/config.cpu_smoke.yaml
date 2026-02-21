@@ -1,4 +1,7 @@
 # CPU/저사양 스모크 테스트용
+task:
+  name: grounding
+
 model:
   backend: florence2
   name: microsoft/Florence-2-base
