@@ -46,6 +46,45 @@ class DataConfig(BaseModel):
     normalize_mode: str = Field(default="0-1000")
 
 
+class CaptureConfig(BaseModel):
+    """Configuration for input log capture and action-frame correlation."""
+
+    input_log_path: str | None = None
+    input_log_format: str = "jsonl"
+    video_path: str | None = None
+    frame_dir: str | None = None
+    fps: float = 2.0
+    time_tolerance_ms: float = 200.0
+    crop_radius_px: int = 64
+
+
+class HITLConfig(BaseModel):
+    """Configuration for human-in-the-loop review pipeline."""
+
+    queue_dir: str = "runs/hitl_queue"
+    low_confidence_threshold: float = 0.4
+    ambiguity_iou_threshold: float = 0.3
+
+
+class RuntimeConfig(BaseModel):
+    """Configuration for runtime monitoring and drift detection."""
+
+    confidence_window: int = 100
+    drift_hash_threshold: int = 12
+    low_confidence_threshold: float = 0.3
+    failure_store_dir: str = "runs/failures"
+    reference_frames_dir: str | None = None
+
+
+class RetrainConfig(BaseModel):
+    """Configuration for automated retrain triggers."""
+
+    failure_threshold: int = 50
+    correction_threshold: int = 20
+    drift_threshold: float = 0.5
+    cooldown_hours: float = 24.0
+
+
 class TrainRunConfig(BaseModel):
     """Top-level training config used by CLI."""
 
@@ -53,3 +92,18 @@ class TrainRunConfig(BaseModel):
     model: ModelConfig = Field(default_factory=ModelConfig)
     trainer: TrainerConfig = Field(default_factory=TrainerConfig)
     data: DataConfig
+
+
+class FactoryConfig(BaseModel):
+    """Full lifecycle factory config encompassing all pipeline stages."""
+
+    task: TaskConfig = Field(default_factory=TaskConfig)
+    model: ModelConfig = Field(default_factory=ModelConfig)
+    trainer: TrainerConfig = Field(default_factory=TrainerConfig)
+    data: DataConfig
+    capture: CaptureConfig = Field(default_factory=CaptureConfig)
+    hitl: HITLConfig = Field(default_factory=HITLConfig)
+    runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
+    retrain: RetrainConfig = Field(default_factory=RetrainConfig)
+    tool_id: str = "tool"
+    tool_version: str = "v1"

@@ -1,0 +1,46 @@
+task:
+  name: tool_button_detection
+
+model:
+  backend: yolo_ultralytics
+  name: yolov8n.pt
+
+trainer:
+  learning_rate: 1.0e-3
+  batch_size: 16
+  epochs: 30
+  checkpoint_dir: checkpoints
+
+data:
+  train_jsonl: data/train.jsonl
+  image_root: data/images
+
+capture:
+  input_log_path: null
+  input_log_format: jsonl
+  video_path: null
+  frame_dir: null
+  fps: 2.0
+  time_tolerance_ms: 200.0
+  crop_radius_px: 64
+
+hitl:
+  queue_dir: runs/hitl_queue
+  low_confidence_threshold: 0.4
+  ambiguity_iou_threshold: 0.3
+
+runtime:
+  confidence_window: 100
+  drift_hash_threshold: 12
+  low_confidence_threshold: 0.3
+  failure_store_dir: runs/failures
+  reference_frames_dir: null
+
+retrain:
+  failure_threshold: 50
+  correction_threshold: 20
+  drift_threshold: 0.5
+  cooldown_hours: 24.0
+
+tool_id: tool
+tool_version: v1

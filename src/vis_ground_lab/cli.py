@@ -13,7 +13,7 @@ from PIL import Image
 
 from vis_ground_lab.base import BoundingBox
 from vis_ground_lab.config.schema import ModelConfig
-from vis_ground_lab.config.loader import load_train_config
+from vis_ground_lab.config.loader import load_factory_config, load_train_config
 from vis_ground_lab.data import (
     add_annotation_entry,
     add_image_entry,
@@ -436,6 +436,240 @@ def evaluate(
 
     result = evaluator.evaluate(predictions=pred_boxes, targets=gt_boxes)
     typer.echo(result)
+
+
+@app.command()
+def capture(
+    config: str = typer.Option(..., "--config", "-c", help="Path to factory YAML config"),
+    workdir: str = typer.Option("runs/capture", help="Working directory for capture output"),
+) -> None:
+    """Parse input logs, correlate with frames, auto-label, and route to HITL."""
+    from vis_ground_lab.capture import ActionFrameMatcher, InputLogParser
+    from vis_ground_lab.hitl import ConfidenceScorer, ReviewQueue
+    from vis_ground_lab.hitl.review_queue import ReviewItem
+
+    cfg = load_factory_config(config)
+    workdir_path = Path(workdir)
+    workdir_path.mkdir(parents=True, exist_ok=True)
+
+    # Parse input log
+    if not cfg.capture.input_log_path:
+        raise typer.BadParameter("capture.input_log_path is required in config")
+
+    if cfg.capture.input_log_format == "csv":
+        events = InputLogParser.from_csv(cfg.capture.input_log_path)
+    else:
+        events = InputLogParser.from_jsonl(cfg.capture.input_log_path)
+    typer.echo(f"Parsed {len(events)} input events")
+
+    # Determine frame dir
+    frame_dir = cfg.capture.frame_dir
+    if not frame_dir:
+        if cfg.capture.video_path:
+            frame_dir = str(workdir_path / "frames")
+            extract_frames(
+                video_path=cfg.capture.video_path,
+                out_dir=frame_dir,
+                fps=cfg.capture.fps,
+            )
+        else:
+            raise typer.BadParameter("capture.frame_dir or capture.video_path is required")
+
+    # Match actions to frames
+    matcher = ActionFrameMatcher(
+        frame_dir=frame_dir,
+        fps=cfg.capture.fps,
+        time_tolerance_ms=cfg.capture.time_tolerance_ms,
+    )
+    pairs = matcher.match(events)
+    typer.echo(f"Matched {len(pairs)} action-frame pairs")
+
+    # Export as COCO
+    coco_path = workdir_path / "auto_labels.coco.json"
+    matcher.to_coco(pairs, class_names=["button"], out_path=coco_path, crop_radius_px=cfg.capture.crop_radius_px)
+    typer.echo(f"COCO saved to {coco_path}")
+
+    # Route low-confidence pairs to HITL queue
+    scorer = ConfidenceScorer(
+        low_confidence_threshold=cfg.hitl.low_confidence_threshold,
+        ambiguity_iou_threshold=cfg.hitl.ambiguity_iou_threshold,
+    )
+    queue = ReviewQueue(cfg.hitl.queue_dir)
+    routed = 0
+    for pair in pairs:
+        if pair.auto_label is None:
+            from datetime import datetime, timezone
+
+            item = ReviewItem(
+                image_path=str(pair.frame_path),
+                frame_id=f"capture_{pair.frame_index}",
+                elements=[],
+                uncertainty_score=1.0,
+                source="auto_capture",
+                timestamp=datetime.now(tz=timezone.utc).isoformat(),
+            )
+            queue.enqueue(item)
+            routed += 1
+
+    typer.echo(f"Routed {routed} items to HITL queue at {cfg.hitl.queue_dir}")
+
+
+@app.command()
+def review(
+    queue_dir: str = typer.Option("runs/hitl_queue", help="HITL queue directory"),
+    out_coco: str = typer.Option("runs/hitl_queue/corrections.coco.json", help="Output corrections COCO"),
+) -> None:
+    """Show HITL review queue stats and export corrections."""
+    from vis_ground_lab.hitl import ReviewQueue
+
+    queue = ReviewQueue(queue_dir)
+    stats = queue.stats()
+    typer.echo(f"Queue stats: {stats}")
+
+    pending = queue.peek(n=5)
+    if pending:
+        typer.echo(f"Top {len(pending)} pending items:")
+        for item in pending:
+            typer.echo(f"  {item.frame_id}: score={item.uncertainty_score:.3f} source={item.source}")
+
+    if stats["with_corrections"] > 0:
+        queue.export_corrections_as_coco(out_coco)
+        typer.echo(f"Corrections exported to {out_coco}")
+
+
+@app.command()
+def factory(
+    config: str = typer.Option(..., "--config", "-c", help="Path to factory YAML config"),
+    workdir: str = typer.Option("runs/factory", help="Factory working directory"),
+) -> None:
+    """Full lifecycle: profile data → select strategy → train → export → create profile."""
+    from vis_ground_lab.profile import ToolProfile
+    from vis_ground_lab.strategy import AutoStrategySelector, DataProfiler
+
+    cfg = load_factory_config(config)
+    workdir_path = Path(workdir)
+    workdir_path.mkdir(parents=True, exist_ok=True)
+
+    # Profile data
+    profiler = DataProfiler()
+    if cfg.data.dataset_yaml:
+        profile = profiler.profile_coco(cfg.data.dataset_yaml, cfg.data.image_root)
+    elif cfg.data.train_jsonl:
+        profile = profiler.profile_jsonl(cfg.data.train_jsonl, cfg.data.image_root)
+    else:
+        raise typer.BadParameter("data.train_jsonl or data.dataset_yaml is required")
+    typer.echo(f"Data profile: {profile}")
+
+    # Auto-select strategy
+    selector = AutoStrategySelector()
+    strategy = selector.select(profile)
+    typer.echo(f"Selected strategy: {strategy.rationale}")
+
+    # Build config and train
+    train_cfg = selector.to_train_run_config(strategy, cfg.data)
+    model = create_model_wrapper(train_cfg.model)
+    model.load_model()
+
+    if train_cfg.task.name == "grounding":
+        train_dataset = JSONLVisualGroundingDataset(
+            source=train_cfg.data.train_jsonl,
+            image_root=train_cfg.data.image_root,
+            normalize_mode=train_cfg.data.normalize_mode,
+        )
+        engine = TrainerEngine(model_wrapper=model, config=train_cfg.trainer)
+        engine.train(train_dataset=train_dataset)
+    else:
+        dataset_yaml = train_cfg.data.dataset_yaml or train_cfg.data.train_jsonl
+        model.train(
+            dataset=dataset_yaml,
+            cfg={
+                "epochs": train_cfg.trainer.epochs,
+                "batch_size": train_cfg.trainer.batch_size,
+                "learning_rate": train_cfg.trainer.learning_rate,
+            },
+            workdir=str(workdir_path),
+        )
+
+    # Create tool profile
+    profile_data = ToolProfile(
+        tool_id=cfg.tool_id,
+        tool_version=cfg.tool_version,
+        package_dir=str(workdir_path),
+        model_cfg=train_cfg.model,
+        data_config=train_cfg.data,
+        runtime_config=cfg.runtime.model_dump(),
+    )
+    profile_path = workdir_path / "tool_profile.json"
+    profile_data.save(profile_path)
+    typer.echo(f"Tool profile saved to {profile_path}")
+
+
+@app.command()
+def monitor(
+    profile_path: str = typer.Option(..., help="Path to tool_profile.json"),
+    image_path: str = typer.Option(..., help="Input image to analyze"),
+) -> None:
+    """Analyze a frame and report runtime monitoring signals."""
+    from vis_ground_lab.profile import ToolProfile
+    from vis_ground_lab.runtime import FrameAnalyzer, RuntimeMonitor
+
+    tp = ToolProfile.load(profile_path)
+    model = tp.get_model_wrapper()
+
+    analyzer = FrameAnalyzer(model=model)
+    analysis = analyzer.analyze(image_path)
+
+    ref_frames = None
+    if tp.reference_frames_dir:
+        ref_dir = Path(tp.reference_frames_dir)
+        ref_frames = list(ref_dir.glob("*.png")) + list(ref_dir.glob("*.jpg"))
+
+    rt_monitor = RuntimeMonitor(
+        reference_frames=ref_frames,
+        drift_hash_threshold=tp.runtime_config.get("drift_hash_threshold", 12),
+        low_confidence_threshold=tp.runtime_config.get("low_confidence_threshold", 0.3),
+    )
+
+    img = Image.open(image_path)
+    signals = rt_monitor.observe(analysis, img)
+
+    typer.echo(json.dumps({"analysis": analysis.to_dict(), "signals": signals}, indent=2, default=str))
+
+
+@app.command()
+def retrain(
+    profile_path: str = typer.Option(..., help="Path to tool_profile.json"),
+    force: bool = typer.Option(False, help="Force retrain regardless of conditions"),
+) -> None:
+    """Evaluate retrain conditions and optionally trigger incremental update."""
+    from vis_ground_lab.hitl import ReviewQueue
+    from vis_ground_lab.profile import ToolProfile
+    from vis_ground_lab.runtime import FailureStore, RetrainTrigger
+
+    tp = ToolProfile.load(profile_path)
+
+    failure_store = FailureStore(tp.failure_store_dir or "runs/failures")
+    review_queue = ReviewQueue(tp.review_queue_dir or "runs/hitl_queue")
+
+    trigger = RetrainTrigger(
+        failure_threshold=tp.runtime_config.get("failure_threshold", 50),
+        correction_threshold=tp.runtime_config.get("correction_threshold", 20),
+    )
+
+    decision = trigger.evaluate(failure_store, review_queue)
+    typer.echo(f"Retrain decision: should_retrain={decision.should_retrain}, reason={decision.reason}")
+    typer.echo(f"  failures={decision.failure_count}, corrections={decision.correction_count}")
+    typer.echo(f"  recommended_strategy={decision.recommended_strategy}")
+
+    if not decision.should_retrain and not force:
+        typer.echo("No retrain needed.")
+        return
+
+    if force:
+        typer.echo("Forced retrain triggered.")
+
+    typer.echo("Retrain would be executed here with the tool profile's model and data config.")
+    trigger.record_retrain()
 
 
 if __name__ == "__main__":

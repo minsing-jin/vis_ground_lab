@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -36,6 +37,38 @@ class UIElement:
     class_name: str
     bbox: BoundingBox
     score: float
+
+
+@dataclass(frozen=True)
+class ActionableElement:
+    """Detected UI element with affordance metadata for LLM/VLM agents."""
+
+    class_name: str
+    bbox: BoundingBox
+    score: float
+    center: tuple[float, float]
+    semantic_id: str
+    affordances: tuple[str, ...]
+    element_type: str
+    metadata: Mapping[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class FrameAnalysis:
+    """Structured output from analyzing a single frame."""
+
+    frame_id: str
+    timestamp_ms: float | None
+    elements: tuple[ActionableElement, ...]
+    resolution: tuple[int, int]
+    drift_score: float
+    metadata: Mapping[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict(), ensure_ascii=False)
 
 
 class BaseVGModel(ABC):
