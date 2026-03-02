@@ -27,6 +27,7 @@ dependencies = [
 [project.scripts]
 myvg = "vis_ground_lab.cli:app"
 vis-ground-lab = "vis_ground_lab.cli:app"
+data-harvest = "data_harvest.cli:app"
 
 [project.optional-dependencies]
 dev = [
@@ -37,6 +38,14 @@ detector = [
   "optuna>=3.6.0",
   "gradio>=4.0.0",
   "opencv-python>=4.9.0.80",
+]
+harvest = [
+  "mss>=9.0.0",
+  "pynput>=1.7.6",
+  "easyocr>=1.7.1",
+  "opencv-python>=4.9.0.80",
+  "gradio>=4.0.0",
+  "scikit-image>=0.22.0",
 ]
 
 [tool.setuptools]

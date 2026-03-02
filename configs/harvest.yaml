@@ -1,0 +1,34 @@
+workdir: runs/harvest_session_01
+game_profile: civ6
+
+recorder:
+  capture_fps: 10
+  buffer_seconds: 5
+  post_action_delay_ms: 500
+  monitor_index: 0
+
+labeler:
+  click_crop_radius_px: 80
+  diff_threshold: 0.02
+  contour_min_area_px: 100
+  ocr_languages: ["en"]
+  ocr_gpu: true
+  fusion_weights:
+    click_proximity: 0.3
+    diff: 0.4
+    ocr: 0.2
+    profile_hint: 0.1
+
+filter:
+  min_diff_ratio: 0.005
+  dedup_hash_threshold: 8
+  blur_laplacian_threshold: 50.0
+  dark_overlay_threshold: 30.0
+  transition_max_diff_ratio: 0.4
+
+review:
+  server_port: 7861
+  auto_approve_confidence: 0.9
+
+export:
+  normalizing_range: 1000

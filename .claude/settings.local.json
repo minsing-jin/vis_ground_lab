@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(python:*)",
+      "Bash(conda info:*)",
+      "Bash(.venv/bin/python:*)"
+    ]
+  }
+}
