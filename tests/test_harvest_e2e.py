@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import cv2
 import numpy as np
@@ -11,16 +12,17 @@ import pytest
 
 from data_harvest.core.config import HarvestConfig
 from data_harvest.core.session import HarvestSession
-from data_harvest.core.types import ActionEvent, ActionType, ReviewStatus
+from data_harvest.core.types import ActionEvent, ActionType
 from data_harvest.labeler.fusion import AutoLabeler
 from data_harvest.filter.pipeline import FilterPipeline
-from data_harvest.export.grounding_exporter import export_grounding
+from data_harvest.export.router_exporter import export_router_full
 from data_harvest.export.stats import compute_stats
+from data_harvest.profiles.registry import discover_profiles, get_profile
 
 
 def _create_synthetic_session(tmp_path: Path, n_samples: int = 5) -> HarvestConfig:
     """Create a synthetic session with pre/post frames and events."""
-    cfg = HarvestConfig(workdir=str(tmp_path / "session"))
+    cfg = HarvestConfig(workdir=str(tmp_path / "session"), game_profile="civ6")
     session = HarvestSession(cfg)
     session.setup()
 
@@ -30,8 +32,8 @@ def _create_synthetic_session(tmp_path: Path, n_samples: int = 5) -> HarvestConf
         # Create pre frame (dark bg + white rectangle as UI element)
         pre = np.zeros((200, 300, 3), dtype=np.uint8)
         # Place a "button" at varying positions
-        bx = 50 + i * 40
-        by = 80
+        bx = 220 + i * 5
+        by = 150
         pre[by : by + 30, bx : bx + 60] = 255
 
         # Create post frame (button changed color after click)
@@ -66,17 +68,17 @@ class TestE2EPipeline:
         unlabeled = session.unlabeled_samples()
         assert len(unlabeled) == 5
 
-        # 2. Auto-label (skip OCR to avoid easyocr dependency)
-        labeler = AutoLabeler(cfg.labeler)
+        # 2. Auto-label (disable VLM/OCR to avoid heavy dependencies)
+        cfg.labeler.vlm.enabled = False
+        cfg.labeler.use_ocr = False
+        discover_profiles()
+        labeler = AutoLabeler(cfg.labeler, profile=get_profile("civ6"))
 
-        # Patch OCR to avoid dependency
-        from unittest.mock import patch
-        with patch("data_harvest.labeler.fusion.ocr_bboxes", return_value=[]):
-            for sample in unlabeled:
-                result = labeler.label_sample(sample)
-                if result is not None:
-                    sample.label = result
-                    sample.save_label()
+        for sample in unlabeled:
+            result = labeler.label_sample(sample)
+            if result is not None:
+                sample.label = result
+                sample.save_label()
 
         labeled = session.labeled_samples()
         assert len(labeled) >= 3  # At least some should be labeled
@@ -88,18 +90,17 @@ class TestE2EPipeline:
             filter_result = pipeline.run(labeled)
         assert filter_result.total_kept > 0
 
-        # 4. Export to grounding JSONL
-        out_path = tmp_path / "grounding.jsonl"
-        export_grounding(filter_result.kept, out_path, normalizing_range=1000)
-        assert out_path.exists()
+        # 4. Export to routing dataset
+        out_dir = tmp_path / "router_full"
+        export_router_full(filter_result.kept, out_dir)
+        labels_csv = out_dir / "labels.csv"
+        assert labels_csv.exists()
 
-        lines = out_path.read_text().strip().split("\n")
-        assert len(lines) > 0
-        for line in lines:
-            rec = json.loads(line)
-            assert "image_path" in rec
-            assert "bbox" in rec
-            assert "action" in rec
+        lines = labels_csv.read_text().strip().splitlines()
+        assert len(lines) > 1
+        header = lines[0].split(",")
+        assert "primitive_id" in header
+        assert "situation_id" in header
 
         # 5. Stats
         stats = compute_stats(session.iter_samples())

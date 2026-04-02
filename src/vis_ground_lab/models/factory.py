@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from vis_ground_lab.config.schema import ModelConfig
 from vis_ground_lab.models.florence2 import Florence2Wrapper
+from vis_ground_lab.models.timm_router import TimmRouterWrapper
 from vis_ground_lab.models.yolo_ultralytics import YoloUltralyticsWrapper
 
 
-def create_model_wrapper(model_cfg: ModelConfig) -> Florence2Wrapper | YoloUltralyticsWrapper:
+def create_model_wrapper(model_cfg: ModelConfig) -> Florence2Wrapper | YoloUltralyticsWrapper | TimmRouterWrapper:
     """Create model wrapper by backend name.
 
     Currently supported:
@@ -25,6 +26,13 @@ def create_model_wrapper(model_cfg: ModelConfig) -> Florence2Wrapper | YoloUltra
             cache_dir=model_cfg.cache_dir,
             train_image_size=model_cfg.train_image_size,
             train_image_seq_length=model_cfg.train_image_seq_length,
+        )
+    if backend == "timm_router":
+        return TimmRouterWrapper(
+            model_name=model_cfg.name,
+            pretrained=model_cfg.pretrained,
+            image_size=model_cfg.router_image_size,
+            dropout=model_cfg.router_dropout,
         )
     if backend == "yolo_ultralytics":
         return YoloUltralyticsWrapper(model_name=model_cfg.name)

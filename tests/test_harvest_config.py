@@ -15,6 +15,8 @@ class TestHarvestConfig:
         cfg = HarvestConfig()
         assert cfg.workdir == "runs/harvest_session_01"
         assert cfg.recorder.capture_fps == 10
+        assert cfg.labeler.provider == "gemini"
+        assert cfg.labeler.provider_fallback_to_local is True
         assert cfg.labeler.click_crop_radius_px == 80
         assert cfg.filter.min_diff_ratio == 0.005
         assert cfg.review.auto_approve_confidence == 0.9
@@ -25,7 +27,7 @@ class TestHarvestConfig:
             "workdir": "runs/test_session",
             "game_profile": "civ6",
             "recorder": {"capture_fps": 5, "buffer_seconds": 3},
-            "labeler": {"click_crop_radius_px": 100},
+            "labeler": {"provider": "local_vlm", "click_crop_radius_px": 100},
         }
         yaml_path = tmp_path / "test.yaml"
         with open(yaml_path, "w") as f:
@@ -36,6 +38,7 @@ class TestHarvestConfig:
         assert cfg.game_profile == "civ6"
         assert cfg.recorder.capture_fps == 5
         assert cfg.recorder.buffer_seconds == 3
+        assert cfg.labeler.provider == "local_vlm"
         assert cfg.labeler.click_crop_radius_px == 100
         # Defaults should still apply for unspecified fields
         assert cfg.filter.dedup_hash_threshold == 8

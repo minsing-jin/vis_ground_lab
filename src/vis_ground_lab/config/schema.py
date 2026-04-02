@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class TaskConfig(BaseModel):
@@ -18,6 +18,7 @@ class TrainerConfig(BaseModel):
     batch_size: int = Field(default=4, ge=1)
     epochs: int = Field(default=3, ge=1)
     checkpoint_dir: str = Field(default="checkpoints")
+    num_workers: int = Field(default=0, ge=0)
 
 
 class ModelConfig(BaseModel):
@@ -33,17 +34,25 @@ class ModelConfig(BaseModel):
     lora_r: int = Field(default=16, ge=1)
     lora_alpha: int = Field(default=32, ge=1)
     lora_dropout: float = Field(default=0.05, ge=0.0, le=1.0)
+    pretrained: bool = False
+    router_image_size: int = Field(default=224, ge=64)
+    router_aux_loss_weight: float = Field(default=0.2, ge=0.0)
+    router_dropout: float = Field(default=0.1, ge=0.0, le=1.0)
 
 
 class DataConfig(BaseModel):
     """Dataset configuration."""
 
-    train_jsonl: str
+    train_jsonl: str | None = None
     eval_jsonl: str | None = None
     image_root: str | None = None
     dataset_yaml: str | None = None
     val_coco: str | None = None
     normalize_mode: str = Field(default="0-1000")
+    train_csv: str | None = None
+    val_csv: str | None = None
+    label_column: str = Field(default="primitive_id")
+    aux_label_columns: list[str] = Field(default_factory=lambda: ["screen_type", "situation_id"])
 
 
 class CaptureConfig(BaseModel):
@@ -93,6 +102,11 @@ class TrainRunConfig(BaseModel):
     trainer: TrainerConfig = Field(default_factory=TrainerConfig)
     data: DataConfig
 
+    @model_validator(mode="after")
+    def validate_task_inputs(self) -> "TrainRunConfig":
+        _validate_data_for_task(self.task.name, self.data)
+        return self
+
 
 class FactoryConfig(BaseModel):
     """Full lifecycle factory config encompassing all pipeline stages."""
@@ -107,3 +121,24 @@ class FactoryConfig(BaseModel):
     retrain: RetrainConfig = Field(default_factory=RetrainConfig)
     tool_id: str = "tool"
     tool_version: str = "v1"
+
+    @model_validator(mode="after")
+    def validate_task_inputs(self) -> "FactoryConfig":
+        _validate_data_for_task(self.task.name, self.data)
+        return self
+
+
+def _validate_data_for_task(task_name: str, data: DataConfig) -> None:
+    task = task_name.lower()
+    if task == "grounding":
+        if not data.train_jsonl:
+            raise ValueError("task.name=grounding requires data.train_jsonl")
+        return
+    if task == "tool_button_detection":
+        if not (data.dataset_yaml or data.train_jsonl):
+            raise ValueError("task.name=tool_button_detection requires data.dataset_yaml or data.train_jsonl")
+        return
+    if task == "router_classification":
+        if not data.train_csv or not data.val_csv:
+            raise ValueError("task.name=router_classification requires data.train_csv and data.val_csv")
+        return

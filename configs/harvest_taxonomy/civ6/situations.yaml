@@ -1,0 +1,609 @@
+# Page-level routing situations.
+#
+# Required:
+# - id
+# - description
+# - screen_types
+# - allowed_primitives
+#
+# Recommended:
+# - trigger_cues: visible text/icons/layout hints that should trigger this label
+# - target_semantic_ids: likely clickable targets in this state
+# - exit_cues: how you know the state has finished
+
+- id: popup_visible
+  description: Generic popup or urgent bottom-right prompt is visible and requires handling.
+  screen_types:
+    - main_map
+    - popup
+  allowed_primitives:
+    - popup_primitive
+  disallowed_primitives:
+    - war_primitive
+    - deal_primitive
+  roi_priority:
+    - bottom_right
+    - popup_center
+  trigger_cues:
+    - Blocking popup with confirm/close affordance
+    - Bottom-right urgent action prompt
+  target_semantic_ids:
+    - btn_accept_popup
+    - btn_close_popup
+    - btn_end_turn
+    - btn_choose_research
+    - btn_choose_production
+    - btn_choose_civic
+  exit_cues:
+    - Popup disappears
+    - Prompt changes to another page-specific chooser
+  review_notes: "Fallback only. Prefer a more specific popup situation when possible."
+
+- id: confirm_accept_popup
+  description: A confirmation popup with an affirmative action is visible.
+  screen_types:
+    - popup
+  allowed_primitives:
+    - popup_primitive
+  disallowed_primitives:
+    - war_primitive
+    - deal_primitive
+  roi_priority:
+    - popup_center
+  trigger_cues:
+    - 확인
+    - 수락
+    - 예
+    - Continue
+  target_semantic_ids:
+    - btn_accept_popup
+    - btn_cancel_popup
+  exit_cues:
+    - Confirmation popup disappears
+  review_notes: "Use when POPUP_PROMPT rule says enter/accept rather than esc."
+
+- id: informational_popup
+  description: An informational popup is visible and can be dismissed without choosing among competing actions.
+  screen_types:
+    - popup
+  allowed_primitives:
+    - popup_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - popup_center
+  trigger_cues:
+    - Single dismiss or close interaction
+    - No strategic branching choice needed
+  target_semantic_ids:
+    - btn_close_popup
+  exit_cues:
+    - Popup disappears after esc or close
+  review_notes: "Use for info-only alerts, summaries, or completed-notification popups."
+
+- id: governor_jump_popup
+  description: A popup is asking to open the governor screen.
+  screen_types:
+    - popup
+  allowed_primitives:
+    - popup_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - popup_center
+  trigger_cues:
+    - 총독화면으로 이동
+  target_semantic_ids:
+    - btn_open_governor_screen
+  exit_cues:
+    - Governor screen opens
+  review_notes: ""
+
+- id: policy_change_prompt
+  description: A popup is asking to open policy management after civic completion or government change.
+  screen_types:
+    - popup
+  allowed_primitives:
+    - popup_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - popup_center
+  trigger_cues:
+    - 정책 변경
+    - 정책변경 미확정
+  target_semantic_ids:
+    - btn_policy_change
+  exit_cues:
+    - Policy screen opens
+  review_notes: ""
+
+- id: next_turn_ready
+  description: Turn can be advanced from the bottom-right prompt.
+  screen_types:
+    - main_map
+  allowed_primitives:
+    - popup_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - bottom_right
+  trigger_cues:
+    - 다음 턴
+    - End Turn
+    - Next Turn
+  target_semantic_ids:
+    - btn_end_turn
+  exit_cues:
+    - New turn begins
+    - Prompt disappears
+  review_notes: "Use when the next-turn style prompt is visible."
+
+- id: research_prompt_visible
+  description: Bottom-right research prompt is visible but the actual research chooser is not open yet.
+  screen_types:
+    - main_map
+  allowed_primitives:
+    - popup_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - bottom_right
+  trigger_cues:
+    - 연구 선택
+    - Choose Research
+    - Blue flask prompt
+  target_semantic_ids:
+    - btn_choose_research
+  exit_cues:
+    - Tech chooser opens
+  review_notes: ""
+
+- id: production_prompt_visible
+  description: Bottom-right or side prompt asks for city production, but the chooser is not open yet.
+  screen_types:
+    - main_map
+    - city_view
+  allowed_primitives:
+    - popup_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - bottom_right
+    - unit_panel
+  trigger_cues:
+    - 생산 품목
+    - Choose Production
+    - Orange gear prompt
+  target_semantic_ids:
+    - btn_choose_production
+  exit_cues:
+    - Production chooser opens
+  review_notes: ""
+
+- id: civic_prompt_visible
+  description: Bottom-right civic prompt is visible but the civic chooser is not open yet.
+  screen_types:
+    - main_map
+  allowed_primitives:
+    - popup_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - bottom_right
+  trigger_cues:
+    - 사회 제도 선택
+    - Choose Civic
+  target_semantic_ids:
+    - btn_choose_civic
+  exit_cues:
+    - Civic chooser opens
+  review_notes: ""
+
+- id: religion_choice_open
+  description: Religion belief or founding selection screen is open.
+  screen_types:
+    - popup
+    - religion_screen
+  allowed_primitives:
+    - religion_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - popup_center
+  trigger_cues:
+    - 종교관 세우기
+    - Belief list
+  target_semantic_ids:
+    - belief_option
+    - btn_found_religion
+  exit_cues:
+    - Found religion flow completes
+  review_notes: ""
+
+- id: governor_list_open
+  description: Governor list screen is open and an appointment or promotion target should be chosen.
+  screen_types:
+    - popup
+    - governor_screen
+  allowed_primitives:
+    - governor_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - popup_center
+  trigger_cues:
+    - Governor card list
+    - 임명
+    - 진급
+  target_semantic_ids:
+    - governor_card
+  exit_cues:
+    - Promotion popup opens
+    - City assignment map opens
+  review_notes: ""
+
+- id: governor_promotion_open
+  description: Governor promotion popup is open and a skill should be selected.
+  screen_types:
+    - popup
+    - governor_screen
+  allowed_primitives:
+    - governor_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - popup_center
+  trigger_cues:
+    - Governor skill tree
+    - 확정 button disabled until skill is chosen
+  target_semantic_ids:
+    - governor_skill_button
+    - btn_confirm
+  exit_cues:
+    - City assignment map opens
+    - Confirm button becomes active
+  review_notes: ""
+
+- id: governor_city_assignment_map
+  description: Governor city assignment map is open and a city target should be selected.
+  screen_types:
+    - governor_screen
+    - main_map
+  allowed_primitives:
+    - governor_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - popup_center
+    - left_panel
+  trigger_cues:
+    - 총독 배정
+    - City list for governor assignment
+  target_semantic_ids:
+    - city_assignment_entry
+  exit_cues:
+    - Assign button becomes active
+  review_notes: ""
+
+- id: governor_assignment_confirm
+  description: Governor assignment confirm button is active and ready to finalize.
+  screen_types:
+    - governor_screen
+    - popup
+  allowed_primitives:
+    - governor_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - popup_center
+  trigger_cues:
+    - 배정
+    - Confirm-ready governor assignment
+  target_semantic_ids:
+    - btn_assign_governor
+  exit_cues:
+    - Assignment finishes
+  review_notes: ""
+
+- id: world_congress_vote
+  description: World Congress voting screen is open.
+  screen_types:
+    - world_congress
+  allowed_primitives:
+    - voting_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - popup_center
+  trigger_cues:
+    - Policy A/B options
+    - Upvote/downvote hand icons
+    - Proposal target selectors
+  target_semantic_ids:
+    - vote_option
+  exit_cues:
+    - Submission popup appears
+    - Return-to-game option appears
+  review_notes: ""
+
+- id: world_congress_submission
+  description: World Congress submission or return-to-game step is visible after choices are made.
+  screen_types:
+    - world_congress
+    - popup
+  allowed_primitives:
+    - voting_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - popup_center
+  trigger_cues:
+    - 제출
+    - 게임으로 돌아가기
+  target_semantic_ids:
+    - btn_return_to_game
+  exit_cues:
+    - Congress screen closes
+  review_notes: ""
+
+- id: era_dedication_open
+  description: Era dedication selection screen is open.
+  screen_types:
+    - popup
+    - era_screen
+  allowed_primitives:
+    - era_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - popup_center
+  trigger_cues:
+    - 4 dedication boxes
+    - 확정
+  target_semantic_ids:
+    - dedication_option
+    - btn_confirm
+  exit_cues:
+    - Era screen closes
+  review_notes: ""
+
+- id: unit_selected_needs_orders
+  description: A selected unit needs an operational decision.
+  screen_types:
+    - main_map
+  allowed_primitives:
+    - unit_ops_primitive
+    - combat_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - unit_panel
+  trigger_cues:
+    - Selected unit panel visible
+    - Move/build/fortify controls visible
+  target_semantic_ids:
+    - unit_action_button
+  exit_cues:
+    - Unit order executes
+    - Unit selection changes
+  review_notes: "Use when no explicit combat target is dominating the screen."
+
+- id: research_selection_open
+  description: Research chooser or tech tree decision is open.
+  screen_types:
+    - main_map
+    - tech_tree
+  allowed_primitives:
+    - research_select_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - bottom_right
+    - popup_center
+  trigger_cues:
+    - Tech tree nodes
+    - Research list
+    - Science chooser
+  target_semantic_ids:
+    - tech_node
+  exit_cues:
+    - Research gets selected
+    - Tech tree closes
+  review_notes: ""
+
+- id: city_production_open
+  description: City production chooser is open.
+  screen_types:
+    - main_map
+    - city_view
+    - popup
+  allowed_primitives:
+    - city_production_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - unit_panel
+    - popup_center
+  trigger_cues:
+    - Production list
+    - Unit/building/project entries
+    - Queue empty in city screen
+  target_semantic_ids:
+    - production_item
+  exit_cues:
+    - Production selected
+    - District placement mode opens
+  review_notes: ""
+
+- id: district_placement_mode
+  description: District or wonder placement mode is active and a valid map hex should be chosen.
+  screen_types:
+    - main_map
+    - city_view
+  allowed_primitives:
+    - city_production_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - main_map
+    - popup_center
+  trigger_cues:
+    - Green valid hexes
+    - Placement confirmation prompt
+  target_semantic_ids:
+    - district_placement_hex
+    - btn_accept_popup
+  exit_cues:
+    - Placement confirms
+  review_notes: ""
+
+- id: civic_selection_open
+  description: Civic chooser or civic tree decision is open.
+  screen_types:
+    - main_map
+    - civic_tree
+  allowed_primitives:
+    - culture_decision_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - bottom_right
+    - popup_center
+  trigger_cues:
+    - Civic tree nodes
+    - Culture chooser
+  target_semantic_ids:
+    - civic_node
+  exit_cues:
+    - Civic selected
+    - Civic tree closes
+  review_notes: ""
+
+- id: diplomacy_envoy_open
+  description: Diplomatic envoy or city-state interaction screen is open.
+  screen_types:
+    - diplomacy
+    - city_state_screen
+  allowed_primitives:
+    - diplomatic_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - popup_center
+    - top_bar
+  trigger_cues:
+    - Envoy arrows
+    - City-state interaction list
+    - Building icon with envoy controls
+  target_semantic_ids:
+    - envoy_button
+    - diplomacy_action
+  exit_cues:
+    - All arrows darkened
+    - Diplomacy interaction closes
+  review_notes: ""
+
+- id: combat_decision_ready
+  description: A combat-capable unit is selected and combat choice is required.
+  screen_types:
+    - main_map
+  allowed_primitives:
+    - combat_primitive
+    - unit_ops_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - unit_panel
+  trigger_cues:
+    - Enemy adjacent
+    - Attack affordance visible
+    - Selected combat unit
+  target_semantic_ids:
+    - attack_button
+    - unit_action_button
+  exit_cues:
+    - Attack resolves
+    - Combat unit moves or fortifies
+  review_notes: ""
+
+- id: policy_confirmation_popup
+  description: Policy confirmation popup is visible, asking whether to keep or cancel intended changes.
+  screen_types:
+    - popup
+  allowed_primitives:
+    - policy_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - popup_center
+  trigger_cues:
+    - 정책 변경을 취소하시겠습니까
+    - 확인
+    - 취소
+  target_semantic_ids:
+    - btn_accept_popup
+    - btn_cancel_popup
+  exit_cues:
+    - Popup disappears
+  review_notes: ""
+
+- id: policy_government_selection
+  description: Government selection screen is open and a government card should be chosen.
+  screen_types:
+    - government
+    - popup
+  allowed_primitives:
+    - policy_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - popup_center
+  trigger_cues:
+    - Government cards
+    - Government overview
+  target_semantic_ids:
+    - government_card
+  exit_cues:
+    - Policy management screen opens
+  review_notes: ""
+
+- id: policy_management_open
+  description: Policy management screen is open with slots on the left and cards on the right.
+  screen_types:
+    - government
+    - popup
+  allowed_primitives:
+    - policy_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - popup_center
+  trigger_cues:
+    - Left slots and right card list
+    - Military/economic/diplomatic/wildcard tabs
+    - 모든 정책 배정
+  target_semantic_ids:
+    - policy_slot
+    - policy_card
+    - btn_assign_all_policies
+  exit_cues:
+    - All policies assigned
+    - Screen closes by esc
+  review_notes: ""
+
+- id: war_negotiation_open
+  description: War declaration or escalation decision screen is open.
+  screen_types:
+    - diplomacy
+    - popup
+  allowed_primitives:
+    - war_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - popup_center
+  trigger_cues:
+    - 전쟁 선포
+    - Red war confirmation button
+  target_semantic_ids:
+    - btn_declare_war
+  exit_cues:
+    - War declaration finishes
+  review_notes: "HITL-only by default."
+
+- id: deal_negotiation_open
+  description: Trade deal screen is open.
+  screen_types:
+    - diplomacy
+    - deal_screen
+  allowed_primitives:
+    - deal_primitive
+  disallowed_primitives: []
+  roi_priority:
+    - popup_center
+  trigger_cues:
+    - 거래진행
+    - 거래 수락
+    - Gold/resource exchange rows
+  target_semantic_ids:
+    - btn_accept_deal
+    - btn_reject_deal
+  exit_cues:
+    - Deal accepted
+    - Deal screen closed with esc
+  review_notes: "HITL-only by default."

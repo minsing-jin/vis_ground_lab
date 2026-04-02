@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import os
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Mapping, Sequence
 
 import torch
@@ -63,6 +64,7 @@ class Florence2Wrapper(BaseVGModel):
         if not torch.cuda.is_available() and not torch.backends.mps.is_available():
             if runtime_dtype in (torch.float16, torch.bfloat16):
                 runtime_dtype = torch.float32
+        config: Any | None = None
         try:
             config = AutoConfig.from_pretrained(
                 self.model_name,
@@ -72,11 +74,8 @@ class Florence2Wrapper(BaseVGModel):
             # Florence-2 remote modeling can fail on sdpa init checks in some
             # transformers/torch combinations. Force eager attention.
             setattr(config, "_attn_implementation", "eager")
-        except OSError as exc:
-            raise OSError(
-                f"Failed to load config for '{self.model_name}'. "
-                f"Check internet access or pre-download model files into cache_dir='{self.cache_dir}'."
-            ) from exc
+        except OSError:
+            config = None
         try:
             self.processor = AutoProcessor.from_pretrained(
                 self.model_name,
@@ -119,18 +118,29 @@ class Florence2Wrapper(BaseVGModel):
             except Exception:
                 self.processor = _FallbackVLProcessor(image_processor=image_processor, tokenizer=tokenizer)
 
+        if config is None:
+            config = getattr(self.processor, "config", None) or SimpleNamespace(image_token_id=-1)
+
         image_token_id = self._synchronize_image_token(config)
-        self._configure_processor_for_training()
+        # Training-time processor overrides can break inference-time generation
+        # shape assumptions, so only apply them when adapters are trainable.
+        if self.use_lora or is_trainable_adapter:
+            self._configure_processor_for_training()
+
+        model_load_kwargs = dict(
+            trust_remote_code=self.trust_remote_code,
+            dtype=runtime_dtype,
+            device_map=self.device_map,
+            cache_dir=self.cache_dir,
+        )
+        if config is not None:
+            model_load_kwargs["config"] = config
+            model_load_kwargs["attn_implementation"] = "eager"
 
         try:
             base_model = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
-                trust_remote_code=self.trust_remote_code,
-                config=config,
-                attn_implementation="eager",
-                dtype=runtime_dtype,
-                device_map=self.device_map,
-                cache_dir=self.cache_dir,
+                **model_load_kwargs,
             )
         except ImportError as exc:
             message = str(exc)
@@ -147,9 +157,15 @@ class Florence2Wrapper(BaseVGModel):
             ) from exc
 
         # Keep token embedding size aligned when we add `<image>` special token.
-        if self.processor is not None and hasattr(self.processor, "tokenizer"):
+        if (
+            self.processor is not None
+            and hasattr(self.processor, "tokenizer")
+            and hasattr(base_model, "get_input_embeddings")
+            and hasattr(base_model, "resize_token_embeddings")
+        ):
             tokenizer = self.processor.tokenizer
-            if image_token_id >= base_model.get_input_embeddings().weight.shape[0]:
+            embeddings = base_model.get_input_embeddings()
+            if embeddings is not None and image_token_id >= embeddings.weight.shape[0]:
                 base_model.resize_token_embeddings(len(tokenizer))
 
         if adapter_path_or_repo is not None:

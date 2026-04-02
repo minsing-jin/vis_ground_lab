@@ -115,6 +115,37 @@ def render_leaderboard_table(rows: list[dict[str, Any]]) -> str:
     return "\n".join([line, sep, *body])
 
 
+def evaluate_detector_checkpoint(
+    *,
+    model_name: str,
+    weights: str,
+    val_coco: str,
+    image_dir: str,
+    reported_map50: float | None = None,
+) -> dict[str, float]:
+    """Evaluate a detector checkpoint with the same objective terms used in HPO."""
+    wrapper = create_model_wrapper(ModelConfig(backend="yolo_ultralytics", name=model_name))
+    wrapper.load_model(weights=weights)
+
+    sample_images = sorted(Path(image_dir).glob("*.png"))[:8]
+    if not sample_images:
+        sample_images = sorted(Path(image_dir).glob("*.jpg"))[:8]
+    latency = wrapper.benchmark_latency([str(p) for p in sample_images], repeats=1)
+
+    click_success = _compute_click_success(model=wrapper, coco_path=val_coco, image_dir=image_dir)
+    latency_ms = float(latency.get("latency_ms_mean", 0.0))
+    map50 = float(reported_map50 or 0.0)
+    score = 0.6 * map50 + 0.4 * click_success - _latency_penalty(latency_ms)
+
+    return {
+        "mAP50": map50,
+        "click_success": click_success,
+        "latency_ms_mean": latency_ms,
+        "latency_ms_p95": float(latency.get("latency_ms_p95", 0.0)),
+        "score": score,
+    }
+
+
 def run_optimization(
     model_name: str,
     data_yaml: str,

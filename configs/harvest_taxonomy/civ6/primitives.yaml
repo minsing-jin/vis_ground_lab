@@ -1,0 +1,267 @@
+# Stable primitive registry.
+#
+# Use this file only for primitives that are stable enough to train/export.
+# Match the shape of your runtime PRIMITIVE_REGISTRY.
+#
+# Required:
+# - id
+# - router_enabled
+# - criteria
+# - prompt_ref
+# - priority
+# - multi_step
+# - max_steps
+# - completion_condition
+
+- id: popup_primitive
+  router_enabled: true
+  hitl_only: false
+  criteria: "팝업 표시됨. 또는 우하단에 '다음 턴'/'연구 선택'/'생산 품목' 버튼 보임."
+  prompt_ref: POPUP_PROMPT
+  priority: 1
+  multi_step: false
+  max_steps: 1
+  completion_condition: ""
+  candidate_situations:
+    - popup_visible
+    - confirm_accept_popup
+    - informational_popup
+    - governor_jump_popup
+    - policy_change_prompt
+    - next_turn_ready
+    - research_prompt_visible
+    - research_selection_open
+    - production_prompt_visible
+    - city_production_open
+    - civic_prompt_visible
+  related_semantic_ids:
+    - btn_end_turn
+    - btn_choose_research
+    - btn_choose_production
+    - btn_choose_civic
+    - btn_open_governor_screen
+    - btn_policy_change
+    - btn_accept_popup
+    - btn_close_popup
+  review_notes: >
+    Use as the generic router class for urgent popup-or-prompt handling.
+
+- id: religion_primitive
+  router_enabled: true
+  hitl_only: false
+  criteria: "종교관 선택 화면. 종교관 목록 또는 '종교관 세우기' 버튼 표시."
+  prompt_ref: RELIGION_PROMPT
+  priority: 2
+  multi_step: true
+  max_steps: 10
+  completion_condition: "초록색 '종교관 세우기' 버튼 클릭 완료 시 task_status='complete'."
+  candidate_situations:
+    - religion_choice_open
+  related_semantic_ids:
+    - btn_found_religion
+    - belief_option
+  review_notes: ""
+
+- id: governor_primitive
+  router_enabled: true
+  hitl_only: false
+  criteria: "총독 카드 나열 또는 '총독 배정' 텍스트 표시. 총독 임명 팝업 포함."
+  prompt_ref: GOVERNOR_PROMPT
+  priority: 3
+  multi_step: true
+  max_steps: 8
+  completion_condition: "[배정] 버튼 클릭 완료 시 task_status='complete'."
+  candidate_situations:
+    - governor_list_open
+    - governor_promotion_open
+    - governor_city_assignment_map
+    - governor_assignment_confirm
+  related_semantic_ids:
+    - governor_card
+    - btn_assign_governor
+    - governor_skill_button
+  review_notes: ""
+
+- id: voting_primitive
+  router_enabled: true
+  hitl_only: false
+  criteria: "세계의회 투표 화면. 정책 A/B 선택, 찬성/반대 기호, 합의안 투표."
+  prompt_ref: VOTING_PROMPT
+  priority: 3
+  multi_step: true
+  max_steps: 12
+  completion_condition: "'게임으로 돌아가기' 클릭 또는 esc 시 task_status='complete'."
+  candidate_situations:
+    - world_congress_vote
+  related_semantic_ids:
+    - vote_option
+    - btn_return_to_game
+  review_notes: ""
+
+- id: era_primitive
+  router_enabled: true
+  hitl_only: false
+  criteria: "시대 전략 선택 화면. 시대 헌신 4개 박스 표시, 확정 버튼."
+  prompt_ref: ERA_PROMPT
+  priority: 3
+  multi_step: true
+  max_steps: 6
+  completion_condition: "'확정' 버튼 클릭 완료 시 task_status='complete'."
+  candidate_situations:
+    - era_dedication_open
+  related_semantic_ids:
+    - dedication_option
+    - btn_confirm
+  review_notes: ""
+
+- id: unit_ops_primitive
+  router_enabled: true
+  hitl_only: false
+  criteria: "유닛 선택됨 (우하단 유닛정보). 이동/공격/건설 필요. 하늘색 타일 또는 적 인접."
+  prompt_ref: UNIT_OPS_PROMPT
+  priority: 4
+  multi_step: false
+  max_steps: 1
+  completion_condition: ""
+  candidate_situations:
+    - unit_selected_needs_orders
+  related_semantic_ids:
+    - unit_action_button
+    - attack_button
+  review_notes: >
+    Keep as a coarse class until unit actions are split into smaller primitives.
+
+- id: research_select_primitive
+  router_enabled: true
+  hitl_only: false
+  criteria: "연구 선택 팝업 표시 또는 기술 트리 화면 열림. 기술 목록/노드 보임."
+  prompt_ref: RESEARCH_MANAGER_PROMPT
+  priority: 5
+  multi_step: true
+  max_steps: 6
+  completion_condition: "기술 클릭 완료 시 task_status='complete'."
+  candidate_situations:
+    - research_selection_open
+  related_semantic_ids:
+    - tech_node
+    - btn_choose_research
+  review_notes: ""
+
+- id: city_production_primitive
+  router_enabled: true
+  hitl_only: false
+  criteria: "생산 품목 선택 팝업 표시. 건물/유닛 목록 보임."
+  prompt_ref: CITY_PRODUCTION_PROMPT
+  priority: 6
+  multi_step: true
+  max_steps: 8
+  completion_condition: "생산 품목 클릭 완료 또는 배치 확인 시 task_status='complete'."
+  candidate_situations:
+    - city_production_open
+    - district_placement_mode
+  related_semantic_ids:
+    - production_item
+    - btn_choose_production
+    - district_placement_hex
+  review_notes: ""
+
+- id: culture_decision_primitive
+  router_enabled: true
+  hitl_only: false
+  criteria: "사회 제도 트리 화면 열림. 사회 제도 노드 트리 형태."
+  prompt_ref: CULTURE_MANAGER_PROMPT
+  priority: 8
+  multi_step: true
+  max_steps: 6
+  completion_condition: "사회 제도 클릭 완료 시 task_status='complete'."
+  candidate_situations:
+    - civic_selection_open
+  related_semantic_ids:
+    - civic_node
+    - btn_choose_civic
+  review_notes: ""
+
+- id: diplomatic_primitive
+  router_enabled: true
+  hitl_only: false
+  criteria: "외교 화면. 도시국가 사절파견 또는 외교 상호작용."
+  prompt_ref: DIPLOMATIC_PROMPT
+  priority: 9
+  multi_step: true
+  max_steps: 10
+  completion_condition: "모든 화살표가 어두워짐 시 task_status='complete'."
+  candidate_situations:
+    - diplomacy_envoy_open
+  related_semantic_ids:
+    - envoy_button
+    - diplomacy_action
+  review_notes: ""
+
+- id: combat_primitive
+  router_enabled: true
+  hitl_only: false
+  criteria: "전투 유닛이 적 인접. 공격/방어 결정 필요."
+  prompt_ref: COMBAT_PROMPT
+  priority: 10
+  multi_step: false
+  max_steps: 1
+  completion_condition: ""
+  candidate_situations:
+    - combat_decision_ready
+  related_semantic_ids:
+    - attack_button
+    - unit_action_button
+  review_notes: ""
+
+- id: policy_primitive
+  router_enabled: true
+  hitl_only: false
+  criteria: "정부/정책 변경 화면. 정부 선택 또는 '정책변경 미확정' 팝업."
+  prompt_ref: POLICY_PROMPT
+  priority: 11
+  multi_step: true
+  max_steps: 8
+  completion_condition: "'모든 정책 배정' 버튼 클릭 또는 esc 시 task_status='complete'."
+  candidate_situations:
+    - policy_confirmation_popup
+    - policy_government_selection
+    - policy_management_open
+  related_semantic_ids:
+    - government_card
+    - policy_slot
+    - policy_card
+    - btn_assign_all_policies
+    - btn_accept_popup
+    - btn_cancel_popup
+  review_notes: ""
+
+- id: war_primitive
+  router_enabled: false
+  hitl_only: true
+  criteria: ""
+  prompt_ref: WAR_PROMPT
+  priority: -1
+  multi_step: true
+  max_steps: 8
+  completion_condition: "전쟁선포 완료 후 esc 시 task_status='complete'."
+  candidate_situations:
+    - war_negotiation_open
+  related_semantic_ids:
+    - btn_declare_war
+  review_notes: "HITL-only. Exclude from router export by default."
+
+- id: deal_primitive
+  router_enabled: false
+  hitl_only: true
+  criteria: ""
+  prompt_ref: DEAL_PROMPT
+  priority: -1
+  multi_step: true
+  max_steps: 10
+  completion_condition: "거래수락 + esc 또는 esc x2 취소 시 task_status='complete'."
+  candidate_situations:
+    - deal_negotiation_open
+  related_semantic_ids:
+    - btn_accept_deal
+    - btn_reject_deal
+  review_notes: "HITL-only. Exclude from router export by default."

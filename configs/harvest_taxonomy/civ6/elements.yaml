@@ -1,0 +1,472 @@
+# Actionable UI element ontology.
+#
+# Required:
+# - id
+# - display_name
+# - function_id_or_related_primitive
+# - available_actions
+# - roi_hint
+#
+# This file does not need to be complete on day 1.
+# Add only stable and review-relevant semantics first.
+
+- id: btn_end_turn
+  display_name: End Turn / Next Turn button
+  function_id_or_related_primitive: popup_primitive
+  text_aliases:
+    - End Turn
+    - Next Turn
+  icon_aliases: []
+  available_actions:
+    - click
+    - press
+  hotkeys:
+    - SHIFT+ENTER
+  roi_hint: bottom_right
+  default_enabled_state: enabled
+  review_notes: "Use for the clickable bottom-right turn advance control."
+
+- id: btn_choose_research
+  display_name: Choose Research button
+  function_id_or_related_primitive: popup_primitive
+  text_aliases:
+    - Choose Research
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: bottom_right
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: btn_choose_civic
+  display_name: Choose Civic button
+  function_id_or_related_primitive: culture_decision_primitive
+  text_aliases:
+    - Choose Civic
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: bottom_right
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: btn_choose_production
+  display_name: Choose Production button
+  function_id_or_related_primitive: popup_primitive
+  text_aliases:
+    - Choose Production
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: unit_panel
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: btn_open_governor_screen
+  display_name: Open Governor Screen button
+  function_id_or_related_primitive: popup_primitive
+  text_aliases:
+    - 총독화면으로 이동
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: btn_policy_change
+  display_name: Policy Change button
+  function_id_or_related_primitive: popup_primitive
+  text_aliases:
+    - 정책 변경
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: btn_accept_popup
+  display_name: Popup confirm button
+  function_id_or_related_primitive: popup_primitive
+  text_aliases:
+    - 확인
+    - 수락
+    - 예
+  icon_aliases: []
+  available_actions:
+    - click
+    - press
+  hotkeys:
+    - ENTER
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: btn_cancel_popup
+  display_name: Popup cancel button
+  function_id_or_related_primitive: policy_primitive
+  text_aliases:
+    - 취소
+  icon_aliases: []
+  available_actions:
+    - click
+    - press
+  hotkeys:
+    - ESC
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: btn_close_popup
+  display_name: Popup close or dismiss control
+  function_id_or_related_primitive: popup_primitive
+  text_aliases:
+    - 닫기
+    - 확인
+  icon_aliases:
+    - close_x
+  available_actions:
+    - click
+    - press
+  hotkeys:
+    - ESC
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: unit_action_button
+  display_name: Unit action button
+  function_id_or_related_primitive: unit_ops_primitive
+  text_aliases: []
+  icon_aliases:
+    - fortify
+    - sleep
+    - alert
+    - skip_turn
+    - move
+    - attack
+    - build
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: unit_panel
+  default_enabled_state: enabled
+  review_notes: "Generic unit action button until split further."
+
+- id: btn_found_religion
+  display_name: Found Religion button
+  function_id_or_related_primitive: religion_primitive
+  text_aliases:
+    - 종교관 세우기
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: belief_option
+  display_name: Belief option card
+  function_id_or_related_primitive: religion_primitive
+  text_aliases: []
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: "Each selectable religion belief item."
+
+- id: governor_card
+  display_name: Governor card
+  function_id_or_related_primitive: governor_primitive
+  text_aliases: []
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: governor_skill_button
+  display_name: Governor skill button
+  function_id_or_related_primitive: governor_primitive
+  text_aliases: []
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: city_assignment_entry
+  display_name: Governor city assignment entry
+  function_id_or_related_primitive: governor_primitive
+  text_aliases: []
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: left_panel
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: btn_assign_governor
+  display_name: Assign Governor button
+  function_id_or_related_primitive: governor_primitive
+  text_aliases:
+    - 배정
+    - 총독 배정
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: vote_option
+  display_name: Vote option
+  function_id_or_related_primitive: voting_primitive
+  text_aliases: []
+  icon_aliases:
+    - approve
+    - reject
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: btn_return_to_game
+  display_name: Return to Game button
+  function_id_or_related_primitive: voting_primitive
+  text_aliases:
+    - 게임으로 돌아가기
+  icon_aliases: []
+  available_actions:
+    - click
+    - press
+  hotkeys:
+    - ESC
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: dedication_option
+  display_name: Dedication option
+  function_id_or_related_primitive: era_primitive
+  text_aliases: []
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: btn_confirm
+  display_name: Confirm button
+  function_id_or_related_primitive: era_primitive
+  text_aliases:
+    - 확정
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: tech_node
+  display_name: Technology node
+  function_id_or_related_primitive: research_select_primitive
+  text_aliases: []
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: "Use for selectable research nodes."
+
+- id: production_item
+  display_name: Production item
+  function_id_or_related_primitive: city_production_primitive
+  text_aliases: []
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: "Use for unit/building/project entries."
+
+- id: district_placement_hex
+  display_name: District or wonder placement hex
+  function_id_or_related_primitive: city_production_primitive
+  text_aliases: []
+  icon_aliases:
+    - green_hex
+  available_actions:
+    - click
+    - right_click
+  hotkeys: []
+  roi_hint: main_map
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: civic_node
+  display_name: Civic node
+  function_id_or_related_primitive: culture_decision_primitive
+  text_aliases: []
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: envoy_button
+  display_name: Envoy button
+  function_id_or_related_primitive: diplomatic_primitive
+  text_aliases: []
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: diplomacy_action
+  display_name: Diplomacy action control
+  function_id_or_related_primitive: diplomatic_primitive
+  text_aliases: []
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: attack_button
+  display_name: Attack button
+  function_id_or_related_primitive: combat_primitive
+  text_aliases: []
+  icon_aliases:
+    - melee_attack
+    - ranged_attack
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: unit_panel
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: policy_slot
+  display_name: Policy slot
+  function_id_or_related_primitive: policy_primitive
+  text_aliases: []
+  icon_aliases: []
+  available_actions:
+    - click
+    - drag
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: government_card
+  display_name: Government card
+  function_id_or_related_primitive: policy_primitive
+  text_aliases: []
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: policy_card
+  display_name: Policy card
+  function_id_or_related_primitive: policy_primitive
+  text_aliases: []
+  icon_aliases: []
+  available_actions:
+    - click
+    - drag
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: btn_assign_all_policies
+  display_name: Assign All Policies button
+  function_id_or_related_primitive: policy_primitive
+  text_aliases:
+    - 모든 정책 배정
+  icon_aliases: []
+  available_actions:
+    - click
+    - press
+  hotkeys:
+    - ESC
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: ""
+
+- id: btn_declare_war
+  display_name: Declare War button
+  function_id_or_related_primitive: war_primitive
+  text_aliases:
+    - 전쟁 선포
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: "HITL-only by default."
+
+- id: btn_accept_deal
+  display_name: Accept Deal button
+  function_id_or_related_primitive: deal_primitive
+  text_aliases:
+    - 거래 수락
+  icon_aliases: []
+  available_actions:
+    - click
+  hotkeys: []
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: "HITL-only by default."
+
+- id: btn_reject_deal
+  display_name: Reject Deal button
+  function_id_or_related_primitive: deal_primitive
+  text_aliases:
+    - 취소
+    - 거절
+  icon_aliases: []
+  available_actions:
+    - click
+    - press
+  hotkeys:
+    - ESC
+  roi_hint: popup_center
+  default_enabled_state: enabled
+  review_notes: "HITL-only by default."

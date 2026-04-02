@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from math import sqrt
 
 from vis_ground_lab.base import BoundingBox
@@ -50,4 +51,45 @@ class Evaluator:
         return {
             "mean_iou": sum(ious) / len(ious),
             "mean_distance_px": sum(distances) / len(distances),
+        }
+
+    @staticmethod
+    def accuracy(predictions: list[int], targets: list[int]) -> float:
+        if len(predictions) != len(targets):
+            raise ValueError("predictions and targets must have equal lengths")
+        if not predictions:
+            return 0.0
+        correct = sum(int(pred == target) for pred, target in zip(predictions, targets))
+        return float(correct / len(predictions))
+
+    @staticmethod
+    def macro_f1(predictions: list[int], targets: list[int]) -> float:
+        if len(predictions) != len(targets):
+            raise ValueError("predictions and targets must have equal lengths")
+        if not predictions:
+            return 0.0
+
+        labels = sorted(set(predictions) | set(targets))
+        f1_scores: list[float] = []
+        pred_counter = Counter(predictions)
+        target_counter = Counter(targets)
+
+        for label in labels:
+            tp = sum(1 for pred, target in zip(predictions, targets) if pred == label and target == label)
+            fp = pred_counter[label] - tp
+            fn = target_counter[label] - tp
+            precision = tp / (tp + fp) if (tp + fp) else 0.0
+            recall = tp / (tp + fn) if (tp + fn) else 0.0
+            if precision + recall == 0.0:
+                f1_scores.append(0.0)
+                continue
+            f1_scores.append((2.0 * precision * recall) / (precision + recall))
+
+        return float(sum(f1_scores) / len(f1_scores))
+
+    def evaluate_classification(self, predictions: list[int], targets: list[int]) -> dict[str, float]:
+        """Return basic classification metrics."""
+        return {
+            "macro_f1": self.macro_f1(predictions, targets),
+            "accuracy": self.accuracy(predictions, targets),
         }

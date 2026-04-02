@@ -26,3 +26,11 @@ def test_evaluator_aggregate_dict_shape():
     assert set(result.keys()) == {"mean_iou", "mean_distance_px"}
     assert result["mean_iou"] == 1.0
     assert result["mean_distance_px"] == 0.0
+
+
+def test_evaluator_classification_metrics():
+    evaluator = Evaluator()
+    result = evaluator.evaluate_classification(predictions=[0, 1, 1, 0], targets=[0, 1, 0, 0])
+
+    assert round(result["accuracy"], 6) == 0.75
+    assert round(result["macro_f1"], 6) == round((0.8 + (2 / 3)) / 2, 6)

@@ -1,0 +1,46 @@
+# Collection policy for consistent routing + grounding data.
+
+game_id: civ6
+resolution: [1920, 1080]
+ui_scale: 1.0
+monitor_index: 1
+record_events:
+  - click
+  - right_click
+  - double_click
+  - drag
+  - scroll
+  - press
+  - type
+enable_hover: false
+post_action_delay_ms: 500
+route_primary_rois:
+  - bottom_right
+  - unit_panel
+  - popup_center
+review_requirements:
+  require_situation_id: true
+  require_primitive_id: true
+  require_semantic_id: true
+  require_bbox_for_mouse_targets: true
+  allow_null_bbox_for_keyboard_only: true
+dataset_targets:
+  min_approved_per_primitive: 50
+  min_approved_per_situation: 50
+  min_approved_for_core_primitives: 100
+core_primitives:
+  - popup_primitive
+  - religion_primitive
+  - governor_primitive
+  - voting_primitive
+  - era_primitive
+  - unit_ops_primitive
+  - research_select_primitive
+  - city_production_primitive
+  - culture_decision_primitive
+  - diplomatic_primitive
+  - combat_primitive
+  - policy_primitive
+hitl_only_primitives:
+  - war_primitive
+  - deal_primitive

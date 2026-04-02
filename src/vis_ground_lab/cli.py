@@ -10,6 +10,7 @@ from typing import Any
 
 import typer
 from PIL import Image
+from torch.utils.data import DataLoader
 
 from vis_ground_lab.base import BoundingBox
 from vis_ground_lab.config.schema import ModelConfig
@@ -23,15 +24,16 @@ from vis_ground_lab.data import (
     register_categories,
     save_coco,
 )
-from vis_ground_lab.data_manager import JSONLVisualGroundingDataset
+from vis_ground_lab.data_manager import JSONLVisualGroundingDataset, RouterClassificationDataset
 from vis_ground_lab.evaluation import Evaluator
 from vis_ground_lab.export import compute_dataset_hash, create_model_package
 from vis_ground_lab.labeling import launch_labeling_app
 from vis_ground_lab.models.factory import create_model_wrapper
 from vis_ground_lab.models.florence2 import Florence2Wrapper
+from vis_ground_lab.optimization.optuna_runner import evaluate_detector_checkpoint
 from vis_ground_lab.optimization import run_optimization
 from vis_ground_lab.prelabel import create_prelabeler
-from vis_ground_lab.training.trainer_engine import TrainerEngine
+from vis_ground_lab.training import RouterTrainer, TrainerEngine
 
 app = typer.Typer(help="Visual grounding and tool-specific detector toolkit")
 
@@ -71,6 +73,172 @@ def _sample_paths(paths: list[Path], max_samples: int | None) -> list[Path]:
     return sorted(random.sample(paths, max_samples))
 
 
+def _build_evaluation_result(
+    *,
+    task: str,
+    primary_metric: str,
+    metrics: dict[str, Any],
+    artifacts: dict[str, Any] | None = None,
+    checkpoint_path: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "task": task,
+        "primary_metric": primary_metric,
+        "metrics": metrics,
+        "artifacts": artifacts or {},
+        "checkpoint_path": checkpoint_path,
+    }
+
+
+def _evaluate_grounding_task(
+    *,
+    base_model: str,
+    eval_jsonl: str,
+    image_root: str | None,
+    normalize_mode: str,
+    adapter_repo: str | None,
+) -> dict[str, Any]:
+    if adapter_repo:
+        model = Florence2Wrapper.from_pretrained_adapter(
+            base_model_name=base_model,
+            adapter_path_or_repo=adapter_repo,
+        )
+    else:
+        model = Florence2Wrapper(model_name=base_model, use_lora=False)
+        model.load_model()
+
+    dataset = JSONLVisualGroundingDataset(
+        source=eval_jsonl,
+        image_root=image_root,
+        normalize_mode=normalize_mode,
+    )
+    evaluator = Evaluator()
+
+    pred_boxes: list[BoundingBox] = []
+    gt_boxes: list[BoundingBox] = []
+    for sample in dataset:
+        pred = model.predict(image=sample.image, text=sample.text)
+        width = int(sample.metadata["width"]) if sample.metadata and "width" in sample.metadata else 1
+        height = int(sample.metadata["height"]) if sample.metadata and "height" in sample.metadata else 1
+
+        pred_boxes.append(_to_pixel_bbox(pred, normalize_mode=normalize_mode, width=width, height=height))
+        gt_boxes.append(_to_pixel_bbox(sample.bbox, normalize_mode=normalize_mode, width=width, height=height))
+
+    metrics = evaluator.evaluate(predictions=pred_boxes, targets=gt_boxes)
+    return _build_evaluation_result(
+        task="grounding",
+        primary_metric="mean_iou",
+        metrics=metrics,
+        artifacts={"eval_jsonl": eval_jsonl},
+        checkpoint_path=adapter_repo,
+    )
+
+
+def _resolve_detector_weights(checkpoint_dir: str | Path) -> Path | None:
+    checkpoint_dir = Path(checkpoint_dir)
+    candidates = [
+        checkpoint_dir / "best_package" / "model.pt",
+        checkpoint_dir / "best_export" / "model.pt",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+
+    best_weights = sorted(checkpoint_dir.glob("yolo_runs/**/weights/best.pt"))
+    if best_weights:
+        return best_weights[-1]
+    return None
+
+
+def _extract_reported_map50(checkpoint_dir: str | Path) -> float:
+    checkpoint_dir = Path(checkpoint_dir)
+    metrics_path = checkpoint_dir / "best_package" / "metrics.json"
+    if metrics_path.exists():
+        metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
+        try:
+            return float(metrics.get("mAP50", 0.0))
+        except (TypeError, ValueError):
+            return 0.0
+
+    leaderboard_path = checkpoint_dir / "leaderboard.json"
+    if leaderboard_path.exists():
+        rows = json.loads(leaderboard_path.read_text(encoding="utf-8"))
+        if rows:
+            try:
+                return float(rows[0].get("mAP50", 0.0))
+            except (TypeError, ValueError):
+                return 0.0
+    return 0.0
+
+
+def _evaluate_detector_task(cfg, checkpoint_path: str | None = None) -> dict[str, Any]:
+    weights_path = Path(checkpoint_path) if checkpoint_path else _resolve_detector_weights(cfg.trainer.checkpoint_dir)
+    if weights_path is None or not weights_path.exists():
+        raise typer.BadParameter("Detector checkpoint not found. Run train/optimize first or pass --checkpoint-path.")
+
+    if not cfg.data.val_coco or not cfg.data.image_root:
+        raise typer.BadParameter("Detector evaluation requires data.val_coco and data.image_root")
+
+    metrics = evaluate_detector_checkpoint(
+        model_name=cfg.model.name,
+        weights=str(weights_path),
+        val_coco=cfg.data.val_coco,
+        image_dir=cfg.data.image_root,
+        reported_map50=_extract_reported_map50(cfg.trainer.checkpoint_dir),
+    )
+    return _build_evaluation_result(
+        task="tool_button_detection",
+        primary_metric="score",
+        metrics=metrics,
+        artifacts={"val_coco": cfg.data.val_coco, "image_dir": cfg.data.image_root},
+        checkpoint_path=str(weights_path),
+    )
+
+
+def _evaluate_router_task(cfg, checkpoint_path: str | None = None) -> dict[str, Any]:
+    train_dataset = RouterClassificationDataset(
+        source=cfg.data.train_csv,
+        image_root=cfg.data.image_root,
+        image_size=cfg.model.router_image_size,
+        label_column=cfg.data.label_column,
+        aux_label_columns=cfg.data.aux_label_columns,
+    )
+    val_dataset = RouterClassificationDataset(
+        source=cfg.data.val_csv,
+        image_root=cfg.data.image_root,
+        image_size=cfg.model.router_image_size,
+        label_column=cfg.data.label_column,
+        aux_label_columns=cfg.data.aux_label_columns,
+        label_to_index=train_dataset.label_to_index,
+        aux_label_to_index=train_dataset.aux_label_to_index,
+    )
+
+    wrapper = create_model_wrapper(cfg.model)
+    resolved_checkpoint = checkpoint_path or str(Path(cfg.trainer.checkpoint_dir) / "best_router.pt")
+    wrapper.load_model(
+        checkpoint_path=resolved_checkpoint,
+        label_to_index=train_dataset.label_to_index,
+        aux_label_to_index=train_dataset.aux_label_to_index,
+    )
+
+    trainer = RouterTrainer(wrapper, cfg.trainer, aux_loss_weight=cfg.model.router_aux_loss_weight)
+    loader = DataLoader(
+        val_dataset,
+        batch_size=cfg.trainer.batch_size,
+        shuffle=False,
+        num_workers=cfg.trainer.num_workers,
+        collate_fn=RouterTrainer._collate_fn,
+    )
+    metrics = trainer.evaluate(loader)
+    return _build_evaluation_result(
+        task="router_classification",
+        primary_metric="primitive_macro_f1",
+        metrics=metrics,
+        artifacts={"val_csv": cfg.data.val_csv, "label_column": cfg.data.label_column},
+        checkpoint_path=resolved_checkpoint,
+    )
+
+
 @app.command()
 def train(config: str = typer.Option(..., "--config", "-c", help="Path to training YAML config")) -> None:
     """Run training from a YAML config file."""
@@ -99,6 +267,33 @@ def train(config: str = typer.Option(..., "--config", "-c", help="Path to traini
         engine.train(train_dataset=train_dataset, eval_dataset=eval_dataset)
         return
 
+    if task_name == "router_classification":
+        if cfg.model.backend.lower() != "timm_router":
+            raise typer.BadParameter("router_classification currently requires model.backend=timm_router")
+
+        train_dataset = RouterClassificationDataset(
+            source=cfg.data.train_csv,
+            image_root=cfg.data.image_root,
+            image_size=cfg.model.router_image_size,
+            label_column=cfg.data.label_column,
+            aux_label_columns=cfg.data.aux_label_columns,
+        )
+        val_dataset = RouterClassificationDataset(
+            source=cfg.data.val_csv,
+            image_root=cfg.data.image_root,
+            image_size=cfg.model.router_image_size,
+            label_column=cfg.data.label_column,
+            aux_label_columns=cfg.data.aux_label_columns,
+            label_to_index=train_dataset.label_to_index,
+            aux_label_to_index=train_dataset.aux_label_to_index,
+        )
+
+        wrapper = create_model_wrapper(cfg.model)
+        trainer = RouterTrainer(wrapper, cfg.trainer, aux_loss_weight=cfg.model.router_aux_loss_weight)
+        metrics = trainer.train(train_dataset=train_dataset, val_dataset=val_dataset)
+        typer.echo(json.dumps(metrics, indent=2))
+        return
+
     if task_name == "tool_button_detection":
         if cfg.model.backend.lower() != "yolo_ultralytics":
             raise typer.BadParameter("tool_button_detection currently requires model.backend=yolo_ultralytics")
@@ -117,11 +312,11 @@ def train(config: str = typer.Option(..., "--config", "-c", help="Path to traini
             },
             workdir=cfg.trainer.checkpoint_dir,
         )
-        typer.echo(metrics)
+        typer.echo(json.dumps(metrics, indent=2))
         return
 
     raise typer.BadParameter(
-        f"Unsupported task.name={cfg.task.name}. Use 'grounding' or 'tool_button_detection'."
+        f"Unsupported task.name={cfg.task.name}. Use 'grounding', 'router_classification', or 'tool_button_detection'."
     )
 
 
@@ -398,8 +593,10 @@ def infer(
 
 @app.command()
 def evaluate(
-    base_model: str = typer.Option(..., help="Base model id, e.g. microsoft/Florence-2-base"),
-    eval_jsonl: str = typer.Option(..., help="Evaluation JSONL path"),
+    config: str | None = typer.Option(None, "--config", "-c", help="Optional training YAML config"),
+    checkpoint_path: str | None = typer.Option(None, help="Optional checkpoint/model override for router/detector/grounding"),
+    base_model: str | None = typer.Option(None, help="Base model id, e.g. microsoft/Florence-2-base"),
+    eval_jsonl: str | None = typer.Option(None, help="Evaluation JSONL path"),
     image_root: str | None = typer.Option(None, help="Optional image root for relative image_path"),
     normalize_mode: str = typer.Option("none", help="bbox normalize mode: none, 0-1, 0-1000"),
     adapter_repo: str | None = typer.Option(
@@ -408,34 +605,38 @@ def evaluate(
     ),
 ) -> None:
     """Run model on eval set and print mean IoU and center pixel distance."""
-    if adapter_repo:
-        model = Florence2Wrapper.from_pretrained_adapter(
-            base_model_name=base_model,
-            adapter_path_or_repo=adapter_repo,
-        )
-    else:
-        model = Florence2Wrapper(model_name=base_model, use_lora=False)
-        model.load_model()
+    if config:
+        cfg = load_train_config(config)
+        task_name = cfg.task.name.lower()
+        if task_name == "router_classification":
+            result = _evaluate_router_task(cfg, checkpoint_path=checkpoint_path)
+        elif task_name == "tool_button_detection":
+            result = _evaluate_detector_task(cfg, checkpoint_path=checkpoint_path)
+        elif task_name == "grounding":
+            eval_path = cfg.data.eval_jsonl or cfg.data.train_jsonl
+            result = _evaluate_grounding_task(
+                base_model=cfg.model.name,
+                eval_jsonl=eval_path,
+                image_root=cfg.data.image_root,
+                normalize_mode=cfg.data.normalize_mode,
+                adapter_repo=checkpoint_path or cfg.model.adapter_path_or_repo or cfg.trainer.checkpoint_dir,
+            )
+        else:
+            raise typer.BadParameter(f"Unsupported task.name={cfg.task.name}")
+        typer.echo(json.dumps(result, indent=2))
+        return
 
-    dataset = JSONLVisualGroundingDataset(
-        source=eval_jsonl,
+    if not base_model or not eval_jsonl:
+        raise typer.BadParameter("Provide either --config or both --base-model and --eval-jsonl")
+
+    result = _evaluate_grounding_task(
+        base_model=base_model,
+        eval_jsonl=eval_jsonl,
         image_root=image_root,
         normalize_mode=normalize_mode,
+        adapter_repo=adapter_repo or checkpoint_path,
     )
-    evaluator = Evaluator()
-
-    pred_boxes: list[BoundingBox] = []
-    gt_boxes: list[BoundingBox] = []
-    for sample in dataset:
-        pred = model.predict(image=sample.image, text=sample.text)
-        width = int(sample.metadata["width"]) if sample.metadata and "width" in sample.metadata else 1
-        height = int(sample.metadata["height"]) if sample.metadata and "height" in sample.metadata else 1
-
-        pred_boxes.append(_to_pixel_bbox(pred, normalize_mode=normalize_mode, width=width, height=height))
-        gt_boxes.append(_to_pixel_bbox(sample.bbox, normalize_mode=normalize_mode, width=width, height=height))
-
-    result = evaluator.evaluate(predictions=pred_boxes, targets=gt_boxes)
-    typer.echo(result)
+    typer.echo(json.dumps(result, indent=2))
 
 
 @app.command()

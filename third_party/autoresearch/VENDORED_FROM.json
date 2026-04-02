@@ -1,0 +1,6 @@
+{
+  "upstream": "https://github.com/karpathy/autoresearch",
+  "vendored_ref": "snapshot-2026-03-13",
+  "synced_at": "2026-03-13",
+  "notes": "Minimal local scaffold for vis_ground_lab integration. Replace vendored_ref with an exact upstream SHA when performing a full sync."
+}

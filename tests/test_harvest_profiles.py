@@ -16,8 +16,11 @@ class TestProfiles:
         p = get_profile("civ6")
         assert p.display_name == "Civilization VI"
         assert "btn_end_turn" in p.semantic_dict
+        assert "btn_accept_popup" in p.element_catalog
+        assert "popup_primitive" in p.primitive_dict
+        assert "generic_popup_or_entry_prompt_visible" in p.situation_dict
         assert "main_map" in p.screen_types
-        assert "minimap" in p.roi_hints
+        assert "bottom_right" in p.roi_hints
 
     def test_unknown_profile_raises(self):
         import pytest

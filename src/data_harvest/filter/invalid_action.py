@@ -20,4 +20,4 @@ def is_invalid_action(sample: HarvestSample, min_diff_ratio: float = 0.005) -> b
     if pre is None or post is None:
         return True
 
-    return diff_ratio(pre, post) < min_diff_ratio
+    return diff_ratio(pre, post, align=True) < min_diff_ratio

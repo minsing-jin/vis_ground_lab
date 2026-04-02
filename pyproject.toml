@@ -28,6 +28,7 @@ dependencies = [
 myvg = "vis_ground_lab.cli:app"
 vis-ground-lab = "vis_ground_lab.cli:app"
 data-harvest = "data_harvest.cli:app"
+ralph = "ralph_self_improvement.cli:app"
 
 [project.optional-dependencies]
 dev = [
@@ -46,6 +47,13 @@ harvest = [
   "opencv-python>=4.9.0.80",
   "gradio>=4.0.0",
   "scikit-image>=0.22.0",
+  "python-dotenv>=1.0.1",
+  "rich>=13.7.0",
+]
+ralph = [
+  "optuna>=3.6.0",
+  "trl>=0.8.0",
+  "datasets>=2.18.0",
 ]
 
 [tool.setuptools]

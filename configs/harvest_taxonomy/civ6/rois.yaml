@@ -1,0 +1,40 @@
+# Route-critical and review-critical ROI priors.
+#
+# Coordinates are normalized xyxy: [x_min, y_min, x_max, y_max]
+
+- id: bottom_right
+  norm_xyxy: [0.78, 0.72, 1.00, 1.00]
+  description: End-turn and choice prompt region.
+  expected_elements:
+    - btn_end_turn
+    - btn_choose_research
+    - btn_choose_civic
+
+- id: unit_panel
+  norm_xyxy: [0.00, 0.52, 0.32, 0.86]
+  description: Selected unit action panel and city production prompt region.
+  expected_elements:
+    - unit_action_button
+    - btn_choose_production
+
+- id: popup_center
+  norm_xyxy: [0.18, 0.16, 0.82, 0.84]
+  description: Blocking modal or chooser popup area.
+  expected_elements: []
+
+- id: left_panel
+  norm_xyxy: [0.00, 0.10, 0.28, 0.92]
+  description: Left-side list or panel area used by governor and city selection flows.
+  expected_elements:
+    - city_assignment_entry
+
+- id: top_bar
+  norm_xyxy: [0.00, 0.00, 1.00, 0.08]
+  description: Resource and diplomacy strip.
+  expected_elements: []
+
+- id: main_map
+  norm_xyxy: [0.00, 0.08, 1.00, 1.00]
+  description: Main playable map region for unit movement and district placement.
+  expected_elements:
+    - district_placement_hex

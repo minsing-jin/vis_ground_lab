@@ -52,5 +52,19 @@ def create_model_package(
     (outdir / "metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
     (outdir / "latency.json").write_text(json.dumps(latency, indent=2), encoding="utf-8")
     (outdir / "tool_metadata.json").write_text(json.dumps(tool_metadata, indent=2), encoding="utf-8")
+    (outdir / "metadata.json").write_text(
+        json.dumps(
+            {
+                "tool_metadata": tool_metadata,
+                "metrics": metrics,
+                "latency": latency,
+                "preprocessing": preprocessing,
+                "postprocessing": postprocessing,
+                "label_map": label_map,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
 
     return outdir

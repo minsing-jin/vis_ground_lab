@@ -1,0 +1,25 @@
+task:
+  name: router_classification
+
+model:
+  backend: timm_router
+  name: resnet18
+  pretrained: false
+  router_image_size: 224
+  router_aux_loss_weight: 0.2
+  router_dropout: 0.1
+
+trainer:
+  learning_rate: 3.0e-4
+  batch_size: 8
+  epochs: 10
+  checkpoint_dir: runs/router_civ6
+  num_workers: 0
+
+data:
+  train_csv: runs/harvest_session_01/export/router_roi/train.csv
+  val_csv: runs/harvest_session_01/export/router_roi/val.csv
+  label_column: primitive_id
+  aux_label_columns:
+    - screen_type
+    - situation_id

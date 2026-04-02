@@ -51,24 +51,33 @@ class TrainerEngine:
         )
 
         # Align floating tensors with model parameter dtype (CPU often needs fp32).
-        if self.model_wrapper.model is not None:
-            model_dtype = next(self.model_wrapper.model.parameters()).dtype
-            for key, value in list(model_inputs.items()):
-                if hasattr(value, "dtype") and torch.is_floating_point(value):
-                    model_inputs[key] = value.to(dtype=model_dtype)
+        model = self.model_wrapper.model
+        if model is not None:
+            model_dtype = None
+            try:
+                model_dtype = next(model.parameters()).dtype
+            except (AttributeError, StopIteration, TypeError):
+                model_dtype = None
+
+            if model_dtype is not None:
+                for key, value in list(model_inputs.items()):
+                    if hasattr(value, "dtype") and torch.is_floating_point(value):
+                        model_inputs[key] = value.to(dtype=model_dtype)
 
             # Florence-2 text side has a fixed positional embedding budget.
-            max_pos = int(
-                getattr(
-                    getattr(self.model_wrapper.model.config, "text_config", self.model_wrapper.model.config),
-                    "max_position_embeddings",
-                    1024,
+            model_config = getattr(model, "config", None)
+            if model_config is not None and "input_ids" in model_inputs:
+                max_pos = int(
+                    getattr(
+                        getattr(model_config, "text_config", model_config),
+                        "max_position_embeddings",
+                        1024,
+                    )
                 )
-            )
-            if "input_ids" in model_inputs and model_inputs["input_ids"].shape[1] > max_pos:
-                model_inputs["input_ids"] = model_inputs["input_ids"][:, :max_pos]
-                if "attention_mask" in model_inputs:
-                    model_inputs["attention_mask"] = model_inputs["attention_mask"][:, :max_pos]
+                if model_inputs["input_ids"].shape[1] > max_pos:
+                    model_inputs["input_ids"] = model_inputs["input_ids"][:, :max_pos]
+                    if "attention_mask" in model_inputs:
+                        model_inputs["attention_mask"] = model_inputs["attention_mask"][:, :max_pos]
 
         # Default CausalLM training target: next-token prediction.
         if "input_ids" in model_inputs:

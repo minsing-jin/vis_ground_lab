@@ -1,0 +1,22 @@
+# Candidate primitives that are not stable enough for router export yet.
+#
+# Keep new discoveries here first. Promote them to `primitives.yaml` only after:
+# 1. criteria are stable
+# 2. completion condition is stable
+# 3. at least 30-50 approved review examples exist
+
+- id: candidate_example_primitive
+  status: candidate
+  router_enabled: false
+  hitl_only: false
+  criteria: "Describe the screen trigger here."
+  prompt_ref: EXAMPLE_PROMPT
+  priority: null
+  multi_step: true
+  max_steps: 6
+  completion_condition: "Describe when this primitive is considered done."
+  candidate_situations: []
+  related_semantic_ids: []
+  discovered_from_samples: []
+  owner: ""
+  notes: ""

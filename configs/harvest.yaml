@@ -1,23 +1,44 @@
+# User-filled:
+# - workdir: where captured samples and exports will be written
+# - game_profile: taxonomy file to use
 workdir: runs/harvest_session_01
 game_profile: civ6
 
 recorder:
+  # User-filled:
+  # - monitor_index: physical monitor containing the game capture
+  # - ui_scale: set only if you intentionally lock a non-default in-game UI scale
+  # Recommendation: keep Civ6 in fullscreen/borderless or fixed window size+position.
   capture_fps: 10
   buffer_seconds: 5
   post_action_delay_ms: 500
   monitor_index: 0
+  # ui_scale: 1.0
+  enable_hover: false
 
 labeler:
+  routing_only: true                # active path: screen_type + situation_id + primitive_id only
+  provider: gemini                  # 기본 1차 auto label teacher는 Gemini
+  provider_fallback_to_local: true  # Gemini 실패 시 로컬 routing fallback
   click_crop_radius_px: 80
   diff_threshold: 0.02
   contour_min_area_px: 100
-  ocr_languages: ["en"]
-  ocr_gpu: true
+  use_ocr: false                    # legacy only
+  legacy_weak_signals: false        # legacy grounding signals off by default
+  vlm:
+    enabled: true
+    model_name: "microsoft/Florence-2-base"
+    device_map: "auto"
+    crop_radius_px: 120
+    prompts:
+      - "detect the UI element"
+      - "detect the clickable button"
   fusion_weights:
-    click_proximity: 0.3
-    diff: 0.4
-    ocr: 0.2
-    profile_hint: 0.1
+    click_proximity: 0.25
+    diff: 0.35
+    vlm: 0.30
+    ocr: 0.0                        # OCR 가중치 0 (비활성)
+    profile_hint: 0.10
 
 filter:
   min_diff_ratio: 0.005
@@ -29,6 +50,24 @@ filter:
 review:
   server_port: 7861
   auto_approve_confidence: 0.9
+  enable_auto_approve: false
+  legacy_mode: false                # keep legacy fields hidden in default review UI
 
 export:
   normalizing_range: 1000
+  routing_only: true
+  # User-filled only if your dominant routing cues live elsewhere.
+  router_roi_fallbacks:
+    - bottom_right
+    - popup_center
+    - unit_panel
+    - main_map
+
+relabel:
+  enabled: false                    # optional rerun of the same routing teacher
+  provider: gemini
+  model_name: "gemini-2.0-flash-preview"
+  temperature: 0.0
+  max_retries: 3
+  timeout_sec: 20
+  ontology_strict: true
